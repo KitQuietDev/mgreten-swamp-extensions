@@ -25,6 +25,10 @@ export const Settings = z.object({
   port: z.number().int().min(1024).max(65535).default(8765),
   webhookPort: z.number().int().min(1024).max(65535).default(8899),
   webhookSecretFile: z.string().optional(),
+  webhookSignature: z.object({
+    header: z.string().regex(/^X-[a-z0-9-]+$/i),
+    prefix: z.enum(["", "sha256="]),
+  }).optional(),
   actionRoutes: z.record(
     z.string().regex(/^pr-[a-z-]+$/),
     z.string().regex(/^[a-z][a-z-]+$/),
@@ -314,6 +318,7 @@ export const model = {
               `http://127.0.0.1:${g.webhookPort}`,
               secret,
               g.actionRoutes,
+              g.webhookSignature,
             )
             : () =>
               Promise.resolve(

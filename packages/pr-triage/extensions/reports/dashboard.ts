@@ -71,7 +71,7 @@ export type ActionKind =
   | "mark-agent-failures-read"
   | "tour";
 
-const HOOKS_PREFIX = "/actions";
+const HOOKS_PREFIX = "./actions";
 
 /**
  * The same-origin POST URL an action button targets. Single swappable
@@ -844,7 +844,7 @@ function renderPrNumber(
 function renderTourControl(
   row: { prNumber: number; tour?: TourStatus },
 ): string {
-  const href = `/tours/${row.prNumber}.html`;
+  const href = `./tours/${row.prNumber}.html`;
   const fire = (label: string) =>
     `<button class="pbtn pbtn-tour" onclick="fireTour(${row.prNumber}, this)">${label}</button>`;
   const body = row.tour === "ready"
@@ -1424,7 +1424,8 @@ const STYLE = String.raw`
 
 // The browser sends same-origin action requests. Only the server has the webhook secret.
 const SCRIPT = String.raw`
-  var HOOKS_PREFIX = '/actions';
+  var HOOKS_PREFIX = './actions';
+  var verificationNotice = __VERIFICATION_NOTICE__;
   // Keeps an in-progress tweak/push message visible when the 30s board poll
   // replaces card markup. The server's persisted pushed/failed result wins
   // as soon as it appears on the refreshed card.
@@ -1697,7 +1698,7 @@ const SCRIPT = String.raw`
     var card = cardFor(prNumber);
     var ok = window.confirm(
       'Verify and push the reviewed ' + kindKey + ' result for PR #' + prNumber +
-      '?\n\nThe configured workflow must verify the exact reviewed candidate before pushing.'
+      '?\n\n' + verificationNotice.replaceAll('{prNumber}', String(prNumber))
     );
     if (!ok) return;
     if (btn) { btn.disabled = true; }
@@ -1792,6 +1793,7 @@ const SCRIPT = String.raw`
     }).join('\n\n');
     var ok = window.confirm(
       'Push the reviewed ' + kindKey + ' fix to PR #' + prNumber + ' AND post ' + replies.length + ' selected repl' + (replies.length === 1 ? 'y' : 'ies') + '?\n\n' +
+      verificationNotice.replaceAll('{prNumber}', String(prNumber)) + '\n\nReplies post only after a successful push.\n\n' +
       replyPreview
     );
     if (!ok) return;
@@ -2288,7 +2290,7 @@ const SCRIPT = String.raw`
 
   async function poll() {
     try {
-      var resp = await fetch('/board', { cache: 'no-store' });
+      var resp = await fetch('./board', { cache: 'no-store' });
       if (!resp.ok) { throw new Error('HTTP ' + resp.status); }
       var data = await resp.json();
       if (!data || data.ok !== true) { throw new Error('board endpoint returned ok:false'); }
@@ -2532,6 +2534,8 @@ export function renderDashboardHtml(
   board: PrBoard | null | undefined,
   nowMs: number = Date.now(),
   theme: DashboardTheme = {},
+  verificationNotice =
+    "The configured workflow must verify the exact reviewed candidate before pushing.",
 ): string {
   const s: BoardSummary = board?.summary ?? {
     total: 0,
@@ -2654,7 +2658,10 @@ export function renderDashboardHtml(
 
     <footer class="page-footer">Live board · refreshes every 30s without replacing your unsaved reply drafts.</footer>
   </div>
-  <script>${SCRIPT}</script>
+  <script>${
+    SCRIPT.replace("__VERIFICATION_NOTICE__", () =>
+      JSON.stringify(verificationNotice).replaceAll("<", "\\u003c"))
+  }</script>
 </body>
 </html>
 `;

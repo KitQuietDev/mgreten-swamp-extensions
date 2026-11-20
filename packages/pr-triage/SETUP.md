@@ -80,6 +80,12 @@ For an existing `swamp serve` use a matching route and set `webhookPort` on
 `pr-triage-server` to that listener’s loopback port. The webhook secret belongs
 on disk, never in a page or browser storage.
 
+If the existing listener uses a different signature header or expects bare
+hexadecimal instead of `sha256=` followed by hex, set `webhookSignature` in
+the server instance's `globalArguments` (for example,
+`{ header: "X-Webhook-Signature", prefix: "" }`). Both formats send an
+HMAC-SHA256 of the body, never the raw key.
+
 ## 4. Open the dashboard
 
 In another terminal in the same Swamp repository:

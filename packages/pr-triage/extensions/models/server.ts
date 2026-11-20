@@ -38,6 +38,7 @@ type Sources = {
   tour: (file: string) => Promise<Uint8Array<ArrayBuffer> | null>;
   action: (name: string, body: string) => Promise<Response>;
   theme?: DashboardTheme;
+  verificationNotice?: string;
 };
 
 const headers = {
@@ -65,7 +66,12 @@ export function createHandler(
       };
       if (url.pathname === "/" || url.pathname === "/dashboard.html") {
         return new Response(
-          renderDashboardHtml(await sources.board(), Date.now(), sources.theme),
+          renderDashboardHtml(
+            await sources.board(),
+            Date.now(),
+            sources.theme,
+            sources.verificationNotice,
+          ),
           { headers: htmlHeaders },
         );
       }
@@ -142,6 +148,7 @@ export function webhookBridge(
   upstream: string,
   secret: string,
   routes: Record<string, string>,
+  signature = { header: "X-PrTriage-Signature", prefix: "sha256=" },
 ) {
   const encoder = new TextEncoder();
   return async (name: string, body: string): Promise<Response> => {
@@ -167,7 +174,7 @@ export function webhookBridge(
       signal: AbortSignal.timeout(15_000),
       headers: {
         "content-type": "application/json",
-        "X-PrTriage-Signature": `sha256=${sig}`,
+        [signature.header]: `${signature.prefix}${sig}`,
       },
     });
   };

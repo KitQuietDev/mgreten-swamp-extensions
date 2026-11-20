@@ -178,7 +178,7 @@ Deno.test("the scan report publishes the versioned snapshot and only valid theme
 
 Deno.test("webhook bridge forwards exactly the signed request bytes and never guesses a route", async () => {
   const controller = new AbortController();
-  const requests: string[][] = [];
+  const requests: Array<Array<string | null>> = [];
   const server = Deno.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -187,7 +187,8 @@ Deno.test("webhook bridge forwards exactly the signed request bytes and never gu
   }, async (request) => {
     requests.push([
       new URL(request.url).pathname,
-      request.headers.get("X-PrTriage-Signature") ?? "",
+      request.headers.get("X-PrTriage-Signature"),
+      request.headers.get("X-Webhook-Signature"),
       await request.text(),
     ]);
     return new Response("queued", { status: 202 });
@@ -206,8 +207,22 @@ Deno.test("webhook bridge forwards exactly the signed request bytes and never gu
     assertEquals(requests, [[
       "/tour-queue",
       "sha256=5a87823396f64ef64b83bdee31d2d9db787f9f35c01730500d17fa8a14f50086",
+      null,
       '{"prNumber":19}',
     ]]);
+    const legacy = webhookBridge(
+      `http://127.0.0.1:${server.addr.port}`,
+      "fixture-signing-key",
+      { "pr-tour": "tour-queue" },
+      { header: "X-Webhook-Signature", prefix: "" },
+    );
+    await (await legacy("pr-tour", '{"prNumber":19}')).text();
+    assertEquals(requests[1], [
+      "/tour-queue",
+      null,
+      "5a87823396f64ef64b83bdee31d2d9db787f9f35c01730500d17fa8a14f50086",
+      '{"prNumber":19}',
+    ]);
   } finally {
     controller.abort();
     await server.finished;
