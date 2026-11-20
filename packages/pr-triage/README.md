@@ -11,6 +11,11 @@ Swamp webhooks. The optional action workflow drafts peer reviews and inline
 replies for your approval, and prepares selected fixes in a temporary worktree.
 The final push requires explicit approval and a configured verification command.
 
+**Verification:** Peer review was exercised in the browser against GitHub,
+from drafting through staging a pending review. Reply selection and verified
+pushing are covered by local tests, including a local bare Git remote for
+the push. Reply and fix have not yet been exercised end to end against GitHub.
+
 ## Install
 
 ```sh
