@@ -898,6 +898,17 @@ packages:
     source:
       repo: ~/git/swamp/swamp-pr-tour
       ref: b94cc1fc8cfe408cc8aa4ae35e451ae3929cd97f
+  - name: '@mgreten/pr-triage'
+    path: packages/pr-triage
+    manifest: packages/pr-triage/manifest.yaml
+    version: 2026.11.20.1
+    contentHash: 'sha256:2e4f49b6f38c373e9e215ed3d8f99dc357e3f62010b8928b7ed2e091d5342e7e'
+    tests: deterministic
+    dependsOn:
+      - '@mgreten/pr-tour'
+    source:
+      repo: 'https://github.com/meagerfindings/mgreten-swamp-extensions'
+      ref: d0aa5ea2203de3eb17e531104c791c5917b33001
   - name: '@mgreten/pr-watcher'
     path: packages/pr-watcher
     manifest: packages/pr-watcher/extensions/models/manifest.yaml
