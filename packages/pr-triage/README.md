@@ -7,9 +7,9 @@ agent, posts a review, or pushes code.
 
 **What ships:** the read-only status board, on-demand tours via
 `@mgreten/pr-tour`, and a server-side bridge that signs requests to allowlisted
-Swamp webhooks. **Review, reply, and fix actions require your own signed
-workflows.** This package does not generate reviews or replies and has no fix
-engine.
+Swamp webhooks. The optional action workflow drafts peer reviews and inline
+replies for your approval, and prepares selected fixes in a temporary worktree.
+The final push requires explicit approval and a configured verification command.
 
 ## Install
 

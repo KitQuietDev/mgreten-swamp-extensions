@@ -136,7 +136,7 @@ export function createHandler(
 
 const reviewControls = String.raw`
   function mountReviews() {
-    for (const card of document.querySelectorAll('#peer-lane-body .card[data-pr], #reviewpool-lane-body .card[data-pr]')) {
+    for (const card of document.querySelectorAll('.card[data-pr]')) {
       if (card.querySelector('.public-review')) continue;
       const prNumber = Number(card.dataset.pr);
       const panel = document.createElement('div');
@@ -144,44 +144,89 @@ const reviewControls = String.raw`
       const text = document.createElement('pre');
       text.style.whiteSpace = 'pre-wrap';
       text.hidden = true;
+      const replies = document.createElement('div');
       let displayed;
       async function show() {
         const response = await fetch('./review-draft/' + prNumber);
         if (!response.ok) throw Error('Draft unavailable: HTTP ' + response.status);
         displayed = await response.json();
-        text.textContent = displayed.review?.body || 'No draft yet.';
+        text.textContent = [displayed.review?.body, displayed.fix?.diff].filter(Boolean).join('\n\n') || 'No review or fix draft yet.';
         text.hidden = false;
+        replies.replaceChildren();
+        for (const item of displayed.replies?.items || []) {
+          const row = document.createElement('label');
+          row.style.display = 'block';
+          const pick = document.createElement('input');
+          pick.type = 'checkbox';
+          pick.value = String(item.rootId);
+          const comment = document.createElement('span');
+          comment.textContent = item.comment;
+          const body = document.createElement('textarea');
+          body.value = item.body;
+          body.setAttribute('aria-label', 'Reply to thread ' + item.rootId);
+          const post = document.createElement('button');
+          post.className = 'pbtn';
+          post.textContent = 'Post this reply';
+          post.onclick = () => submit(post, 'post-replies', {replies:[{rootId:item.rootId,body:body.value}]}, 'Post this edited reply to GitHub?');
+          row.append(pick, comment, body, post);
+          replies.append(row);
+        }
       }
-      for (const [label, kind] of [['Draft review','draft'], ['Show draft','show'], ['Stage review','send'], ['Dismiss draft','dismiss']]) {
+      async function submit(button, kind, args = {}, confirmation) {
+        if (confirmation && !confirm(confirmation)) return;
+        button.disabled = true;
+        try {
+          const response = await fetch('./actions/pr-public-review', {
+            method:'POST', headers:{'Content-Type':'application/json','X-Pr-Triage':'1'},
+            body:JSON.stringify({prNumber,kind,...args})
+          });
+          if (!response.ok) throw Error('Request failed: HTTP ' + response.status);
+          displayed = undefined;
+          replies.replaceChildren();
+          text.hidden = false;
+          text.textContent = 'Action queued. Use Show drafts after the workflow completes.';
+        } catch (error) { text.hidden = false; text.textContent = String(error); }
+        finally { button.disabled = false; }
+      }
+      const own = !card.closest('#peer-lane-body, #reviewpool-lane-body');
+      const actions = own
+        ? [['Draft replies','draft-replies'],['Post selected replies','post-replies'],['Prepare selected fixes','prepare-fix'],['Verify & push','accept-fix']]
+        : [['Draft review','draft'],['Stage review','send'],['Dismiss draft','dismiss']];
+      for (const [label, kind] of [...actions, ['Show drafts','show']]) {
         const button = document.createElement('button');
         button.className = 'pbtn';
         button.textContent = label;
         button.onclick = async () => {
           try {
             if (kind === 'show') return await show();
-            if (kind === 'send' && (!displayed?.draftId || !confirm('Stage this displayed draft on GitHub?'))) return;
-            button.disabled = true;
-            const response = await fetch('./actions/pr-public-review', {
-              method:'POST', headers:{'Content-Type':'application/json','X-Pr-Triage':'1'},
-              body:JSON.stringify({prNumber, kind, ...(kind === 'send' ? {draftId:displayed.draftId} : {})})
-            });
-            if (!response.ok) throw Error('Request failed: HTTP ' + response.status);
-            const message = kind === 'draft' ? 'Draft queued. Use Show draft to check for the result.' : 'Action queued. Check workflow history for the result.';
-            displayed = undefined;
-            text.hidden = false;
-            text.textContent = message;
+            if (kind === 'send') {
+              if (!displayed?.draftId) throw Error('Show the review draft first');
+              return submit(button, kind, {draftId:displayed.draftId}, 'Stage this displayed draft on GitHub?');
+            }
+            if (kind === 'accept-fix') {
+              if (!displayed?.fix) throw Error('Show the prepared diff first');
+              return submit(button, kind, {candidate:displayed.fix.candidate}, 'Verify the displayed commit and push it if the configured check passes?');
+            }
+            if (kind === 'post-replies' || kind === 'prepare-fix') {
+              const picked = [...replies.querySelectorAll('input:checked')].map(pick=>({rootId:Number(pick.value),body:pick.parentElement.querySelector('textarea').value}));
+              if (!picked.length) throw Error('Select at least one review thread');
+              return kind === 'post-replies'
+                ? submit(button, kind, {replies:picked}, 'Post the selected edited replies to GitHub?')
+                : submit(button, kind, {roots:picked.map(i=>i.rootId)});
+            }
+            return submit(button, kind);
           } catch (error) { text.hidden = false; text.textContent = String(error); }
           finally { button.disabled = false; }
         };
         panel.append(button);
       }
-      panel.append(text);
+      panel.append(text, replies);
       card.append(panel);
     }
   }
   mountReviews();
   const observer = new MutationObserver(mountReviews);
-  for (const id of ['peer-lane-body','reviewpool-lane-body']) {
+  for (const id of ['peer-lane-body','reviewpool-lane-body','my-lane-body','needsyou-lane-body']) {
     const lane = document.getElementById(id);
     if (lane) observer.observe(lane, {childList:true});
   }

@@ -6,10 +6,8 @@ an agent run or setting up a recurring refresh; neither is needed to see the
 dashboard.
 
 This setup gives you a read-only PR status board, per-click code tours, and a
-bridge that signs requests to configured Swamp webhooks. Only the tour workflow
-is wired here. Review, reply, and fix actions require your own signed workflows
-and `actionRoutes` mappings. The dashboard package has no fix engine and does
-not draft or post reviews or replies by itself.
+bridge that signs requests to configured Swamp webhooks. Follow the optional
+action setup below to enable per-click review, inline replies and fixes.
 
 ## 1. Check prerequisites and install
 
@@ -111,3 +109,42 @@ server. If an action returns 404, check the secret file setting and webhook
 route. If a tour fails, read the workflow summary and check that the tour
 `pagesDir` equals the dashboard `toursDir`. Keep both listeners local; the
 dashboard does not authenticate remote viewers.
+
+## Optional: enable review, replies and verified fixes
+
+Install `@mgreten/github-pr-feedback` and create the two named behaviors in
+the same Swamp repo (reuse the `cli-agent` from step 3):
+
+```sh
+swamp extension pull @mgreten/github-pr-feedback
+swamp behavior create @mgreten/github-pr-feedback github-pr-feedback \
+  --global-arg repoSlug=octo-org/octo-repo
+swamp behavior create @mgreten/pr-triage-peer-review pr-triage-peer-review \
+  --global-arg repo=octo-org/octo-repo \
+  --global-arg draftDir="$HOME/.pr-triage/drafts"
+swamp workflow validate @mgreten/pr-triage-peer-review
+```
+
+Set `reviewDraftDir` on `pr-triage-server` to that same directory. Set its
+`actionRoutes` to `{pr-tour: pr-tour, pr-public-review: pr-public-review}` and
+add one more `--webhook` argument to the listener from step 3:
+
+```sh
+--webhook "/pr-public-review:@mgreten/pr-triage-peer-review:@file=$HOME/.pr-triage/webhook-secret:generic:X-PrTriage-Signature:sha256="
+```
+
+Use **Draft review** on a peer card, then **Show drafts** after the workflow
+finishes. **Stage review** creates a pending GitHub review for you to submit
+there; **Dismiss draft** does not touch GitHub. Use **Draft replies** on your
+own PR, open the drafts, edit a reply and post it individually or select several
+threads and post only those replies.
+
+To enable fixes, set `checkout` on `pr-triage-peer-review` to the absolute path
+of a trusted checkout whose `origin` is the configured GitHub repository.
+Set `verifyCommand` to an argv array, such as `[npm, test]`, or provide your
+own verification executable and arguments. The command runs in a temporary
+checkout of the exact candidate SHA, also available as `PR_TRIAGE_CANDIDATE`.
+Only configure commands you trust to execute against the PR's code. Fork PRs
+are not supported for fixes. Select threads, click **Prepare selected fixes**,
+then use **Show drafts** to read the diff before clicking **Verify & push**. A
+failed check or changed branch prevents the non-force push.
