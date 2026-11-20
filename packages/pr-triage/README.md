@@ -5,6 +5,12 @@ PRs grouped into stacks, peer PRs, and an optional review pool. Build a guided
 code tour of one PR when you click **Tour**; scanning the board never starts an
 agent, posts a review, or pushes code.
 
+**What ships:** the read-only status board, on-demand tours via
+`@mgreten/pr-tour`, and a server-side bridge that signs requests to allowlisted
+Swamp webhooks. **Review, reply, and fix actions require your own signed
+workflows.** This package does not generate reviews or replies and has no fix
+engine.
+
 ## Install
 
 ```sh
@@ -66,12 +72,11 @@ pages at `/tours/`. The browser never receives a webhook signing key.
 Issue links are optional. Have your tracker integration write the mapping to
 `issueLinksPath` before scanning. No tracker account is required by the board.
 
-The renderer can also display feedback, drafts and reviewed fix candidates
-supplied via the board schema. It does not produce these by itself. The default
-installation only configures the tour action. A private integration can map
-actions such as `pr-accept-push` to its own workflows via `actionRoutes`. Such
-workflows own verification: they must check the exact reviewed candidate and
-fail closed before pushing if verification does not pass. Do not map a fix
-action straight to an unconditional push.
+The renderer can display feedback, drafts, and reviewed fix candidates supplied
+via the board schema. The default installation only configures the tour action.
+To enable other actions, register your own signed Swamp webhooks and map their
+route names in `actionRoutes`. Your fix workflow must verify the exact reviewed
+candidate and fail closed if verification does not pass. Do not map a fix action
+straight to an unconditional push.
 
 MIT — see [LICENSE.txt](LICENSE.txt).

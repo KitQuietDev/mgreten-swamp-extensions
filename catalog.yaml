@@ -902,7 +902,7 @@ packages:
     path: packages/pr-triage
     manifest: packages/pr-triage/manifest.yaml
     version: 2026.11.20.1
-    contentHash: 'sha256:2e4f49b6f38c373e9e215ed3d8f99dc357e3f62010b8928b7ed2e091d5342e7e'
+    contentHash: 'sha256:02cc12d4217aa6d9dd023f5125b0d3f4a08bb6e934cc545f18d33c0d40a6bd2c'
     tests: deterministic
     dependsOn:
       - '@mgreten/pr-tour'

@@ -5,6 +5,12 @@ Follow these steps from a Swamp repository. Replace `octo-org/octo-repo`,
 an agent run or setting up a recurring refresh; neither is needed to see the
 dashboard.
 
+This setup gives you a read-only PR status board, per-click code tours, and a
+bridge that signs requests to configured Swamp webhooks. Only the tour workflow
+is wired here. Review, reply, and fix actions require your own signed workflows
+and `actionRoutes` mappings. The dashboard package has no fix engine and does
+not draft or post reviews or replies by itself.
+
 ## 1. Check prerequisites and install
 
 ```sh
