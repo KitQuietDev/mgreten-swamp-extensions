@@ -1,5 +1,6 @@
 /** Loopback dashboard and signed webhook bridge. @module */
 import { BoardSchema, type PrBoard } from "./board_schema.ts";
+import { DraftState } from "./review_draft.ts";
 import {
   type DashboardTheme,
   enrichBoardWithTours,
@@ -39,6 +40,7 @@ type Sources = {
   action: (name: string, body: string) => Promise<Response>;
   theme?: DashboardTheme;
   verificationNotice?: string;
+  reviewDraftDir?: string;
 };
 
 const headers = {
@@ -65,15 +67,34 @@ export function createHandler(
         "content-type": "text/html; charset=utf-8",
       };
       if (url.pathname === "/" || url.pathname === "/dashboard.html") {
+        const html = renderDashboardHtml(
+          await sources.board(),
+          Date.now(),
+          sources.theme,
+          sources.verificationNotice,
+        );
         return new Response(
-          renderDashboardHtml(
-            await sources.board(),
-            Date.now(),
-            sources.theme,
-            sources.verificationNotice,
-          ),
+          sources.reviewDraftDir
+            ? html.replace(
+              "</body>",
+              `<script>${reviewControls}</script></body>`,
+            )
+            : html,
           { headers: htmlHeaders },
         );
+      }
+      const draft = /^\/review-draft\/([1-9]\d*)$/.exec(url.pathname);
+      if (sources.reviewDraftDir && draft) {
+        try {
+          const path = `${sources.reviewDraftDir}/review-${draft[1]}.json`;
+          return Response.json(
+            DraftState.parse(JSON.parse(await Deno.readTextFile(path))),
+            { headers },
+          );
+        } catch (error) {
+          if (!(error instanceof Deno.errors.NotFound)) throw error;
+          return Response.json({ review: null, draftId: null }, { headers });
+        }
       }
       const tour = /^\/tours\/([1-9]\d*(?:-[0-9a-f]{12})?\.html)$/.exec(
         url.pathname,
@@ -112,6 +133,59 @@ export function createHandler(
     return new Response("Not found", { status: 404 });
   };
 }
+
+const reviewControls = String.raw`
+  function mountReviews() {
+    for (const card of document.querySelectorAll('#peer-lane-body .card[data-pr], #reviewpool-lane-body .card[data-pr]')) {
+      if (card.querySelector('.public-review')) continue;
+      const prNumber = Number(card.dataset.pr);
+      const panel = document.createElement('div');
+      panel.className = 'public-review';
+      const text = document.createElement('pre');
+      text.style.whiteSpace = 'pre-wrap';
+      text.hidden = true;
+      let displayed;
+      async function show() {
+        const response = await fetch('./review-draft/' + prNumber);
+        if (!response.ok) throw Error('Draft unavailable: HTTP ' + response.status);
+        displayed = await response.json();
+        text.textContent = displayed.review?.body || 'No draft yet.';
+        text.hidden = false;
+      }
+      for (const [label, kind] of [['Draft review','draft'], ['Show draft','show'], ['Stage review','send'], ['Dismiss draft','dismiss']]) {
+        const button = document.createElement('button');
+        button.className = 'pbtn';
+        button.textContent = label;
+        button.onclick = async () => {
+          try {
+            if (kind === 'show') return await show();
+            if (kind === 'send' && (!displayed?.draftId || !confirm('Stage this displayed draft on GitHub?'))) return;
+            button.disabled = true;
+            const response = await fetch('./actions/pr-public-review', {
+              method:'POST', headers:{'Content-Type':'application/json','X-Pr-Triage':'1'},
+              body:JSON.stringify({prNumber, kind, ...(kind === 'send' ? {draftId:displayed.draftId} : {})})
+            });
+            if (!response.ok) throw Error('Request failed: HTTP ' + response.status);
+            const message = kind === 'draft' ? 'Draft queued. Use Show draft to check for the result.' : 'Action queued. Check workflow history for the result.';
+            displayed = undefined;
+            text.hidden = false;
+            text.textContent = message;
+          } catch (error) { text.hidden = false; text.textContent = String(error); }
+          finally { button.disabled = false; }
+        };
+        panel.append(button);
+      }
+      panel.append(text);
+      card.append(panel);
+    }
+  }
+  mountReviews();
+  const observer = new MutationObserver(mountReviews);
+  for (const id of ['peer-lane-body','reviewpool-lane-body']) {
+    const lane = document.getElementById(id);
+    if (lane) observer.observe(lane, {childList:true});
+  }
+`;
 
 /** Load the published snapshot and discover tour pages without calling GitHub. */
 export async function readBoard(

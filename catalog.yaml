@@ -902,10 +902,12 @@ packages:
     path: packages/pr-triage
     manifest: packages/pr-triage/manifest.yaml
     version: 2026.11.20.1
-    contentHash: 'sha256:a26de3c70923e2a39576e03da3078b77b436b3cf7bb7957aaed4ae2dc4972efa'
+    contentHash: 'sha256:3059db1b33a047e60700ddac202d3e7e9806df932b8d9c37d6b78fcb2875a12e'
     tests: deterministic
     dependsOn:
       - '@mgreten/pr-tour'
+      - '@mgreten/github-pr-feedback'
+      - '@mgreten/cli-agent'
     source:
       repo: 'https://github.com/meagerfindings/mgreten-swamp-extensions'
       ref: d0aa5ea2203de3eb17e531104c791c5917b33001

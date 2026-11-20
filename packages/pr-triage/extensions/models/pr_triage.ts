@@ -25,6 +25,7 @@ export const Settings = z.object({
   port: z.number().int().min(1024).max(65535).default(8765),
   webhookPort: z.number().int().min(1024).max(65535).default(8899),
   webhookSecretFile: z.string().optional(),
+  reviewDraftDir: z.string().optional(),
   webhookSignature: z.object({
     header: z.string().regex(/^X-[a-z0-9-]+$/i),
     prefix: z.enum(["", "sha256="]),
@@ -304,6 +305,10 @@ export const model = {
         const handler = createHandler({
           origin,
           theme: g.theme,
+          reviewDraftDir: secret && g.reviewDraftDir &&
+              Object.hasOwn(g.actionRoutes, "pr-public-review")
+            ? expandPath(g.reviewDraftDir)
+            : undefined,
           board: () => readBoard(out, tours),
           tour: async (name) => {
             try {

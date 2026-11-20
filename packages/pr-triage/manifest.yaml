@@ -7,10 +7,12 @@ description: >-
 repository: https://github.com/meagerfindings/mgreten-swamp-extensions
 models:
   - pr_triage.ts
+  - review_draft.ts
 reports:
   - pr_triage_dashboard.ts
 workflows:
   - workflow-pr-triage.yaml
+  - workflow-pr-triage-peer-review.yaml
 additionalFiles:
   - README.md
   - SETUP.md
@@ -23,3 +25,5 @@ labels:
   - dashboard
 dependencies:
   - "@mgreten/pr-tour"
+  - "@mgreten/github-pr-feedback"
+  - "@mgreten/cli-agent"

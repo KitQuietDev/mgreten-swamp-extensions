@@ -40,6 +40,21 @@ const prNumber = z.number().int().positive();
 const config = ReviewDraft.pick({ repo: true }).extend({
   feedbackModel: z.string().default("github-pr-feedback"),
   agentModel: z.string().default("cli-agent"),
+  draftDir: z.string().optional(),
+});
+const draftAction = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("draft"), prNumber }),
+  z.object({ kind: z.literal("dismiss"), prNumber }),
+  z.object({
+    kind: z.literal("send"),
+    prNumber,
+    draftId: z.string().regex(/^[0-9a-f]{64}$/),
+  }),
+]);
+
+export const DraftState = z.object({
+  review: ReviewDraft.nullable(),
+  draftId: z.string().nullable(),
 });
 type Context = {
   globalArgs: z.infer<typeof config>;
@@ -121,15 +136,43 @@ export const model = {
   resources: {
     draft: {
       description: "Local peer review draft for one revision",
-      schema: z.object({
-        review: ReviewDraft.nullable(),
-        draftId: z.string().nullable(),
-      }),
+      schema: DraftState,
       lifetime: "7d" as const,
       garbageCollection: 12,
     },
   },
   methods: {
+    act: {
+      description: "Dispatch one explicitly selected peer review action",
+      arguments: z.object({ action: draftAction }),
+      execute: async (
+        args: { action: z.infer<typeof draftAction> },
+        context: Context,
+      ): Promise<{ dataHandles: unknown[] }> => {
+        const action = draftAction.parse(args.action);
+        const result = action.kind === "send"
+          ? await model.methods.send.execute(action, context)
+          : action.kind === "draft"
+          ? await model.methods.draft.execute(action, context)
+          : await model.methods.dismiss.execute(action, context);
+        const dir = context.globalArgs.draftDir;
+        if (dir) {
+          const name = `review-${action.prNumber}`;
+          const data = DraftState.parse(await context.readResource(name));
+          await Deno.mkdir(dir, { recursive: true, mode: 0o700 });
+          const temp = await Deno.makeTempFile({ dir });
+          try {
+            await Deno.writeTextFile(temp, JSON.stringify(data));
+            await Deno.rename(temp, `${dir}/${name}.json`);
+          } finally {
+            await Deno.remove(temp).catch((error) => {
+              if (!(error instanceof Deno.errors.NotFound)) throw error;
+            });
+          }
+        }
+        return result;
+      },
+    },
     draft: {
       description: "Generate one local draft without posting to GitHub",
       arguments: z.object({ prNumber }),

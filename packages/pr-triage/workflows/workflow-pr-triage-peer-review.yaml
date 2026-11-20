@@ -1,0 +1,28 @@
+id: 0672add8-6961-48c5-bc7d-388977ecc324
+name: '@mgreten/pr-triage-peer-review'
+description: Perform one explicit peer review action on one PR.
+inputs:
+  type: object
+  properties:
+    action:
+      type: object
+  required: [action]
+trigger:
+  inputs:
+    action: ${{ webhook.body }}
+jobs:
+  - name: main
+    steps:
+      - name: review
+        task:
+          type: model_method
+          modelIdOrName: pr-triage-peer-review
+          methodName: act
+          inputs:
+            action: ${{ inputs.action }}
+        dependsOn: []
+        weight: 0
+        allowFailure: false
+    dependsOn: []
+    weight: 0
+version: 1
