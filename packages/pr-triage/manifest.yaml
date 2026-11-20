@@ -1,0 +1,25 @@
+manifestVersion: 1
+name: "@mgreten/pr-triage"
+version: "2026.11.20.1"
+license: MIT
+description: >-
+  A browser dashboard for GitHub pull requests, stacks, CI and on-demand code tours.
+repository: https://github.com/meagerfindings/mgreten-swamp-extensions
+models:
+  - pr_triage.ts
+reports:
+  - pr_triage_dashboard.ts
+workflows:
+  - workflow-pr-triage.yaml
+additionalFiles:
+  - README.md
+  - SETUP.md
+  - LICENSE.txt
+  - extensions/models/board_schema.ts
+platforms: []
+labels:
+  - github
+  - pull-request
+  - dashboard
+dependencies:
+  - "@mgreten/pr-tour"

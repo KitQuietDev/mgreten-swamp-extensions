@@ -1,0 +1,18 @@
+id: 9c11aeee-6f73-4fc2-814a-d903088fa984
+name: "@mgreten/pr-triage"
+description: Refresh the board from open GitHub PRs without running agents or writing to GitHub.
+jobs:
+  - name: dashboard
+    description: Read open PRs and render the board.
+    steps:
+      - name: scan
+        task:
+          type: model_method
+          modelIdOrName: pr-triage
+          methodName: scan
+        dependsOn: []
+        weight: 0
+        allowFailure: false
+    dependsOn: []
+    weight: 0
+version: 1
