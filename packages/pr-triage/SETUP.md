@@ -49,7 +49,13 @@ the instance. Repeat for the server where appropriate.
 
 ## 3. Wire the tour click
 
-The selected agent CLI must be installed and logged in. You need a checkout of
+The selected agent CLI must be installed and authenticated. For unattended
+runs, use a long-lived credential: for Claude, run `claude setup-token` and
+provide the result as `CLAUDE_CODE_OAUTH_TOKEN` in the environment of the
+`swamp serve` process, or use your provider's equivalent. Interactive logins
+expire; never paste the token into the dashboard, workflow YAML, or logs.
+
+You need a checkout of
 the target repo with a GitHub remote (normally `origin`). Do not create a
 duplicate `cli-agent` if you already have one. `@mgreten/pr-tour` creates a
 temporary worktree for the one PR the reader selects.
