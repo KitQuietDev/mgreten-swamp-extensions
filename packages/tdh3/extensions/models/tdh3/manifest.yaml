@@ -1,0 +1,33 @@
+manifestVersion: 1
+name: "@mgreten/tidradio-gmrs"
+version: "2026.11.14.4"
+description: "TIDRADIO GMRS (TD-H3): local guarded partial reads/decode, constrained erased-slot repeater allocation and squelch2, with separate label experiment. Tested TD-H3 GMRS only, no RF tests or full backup."
+repository: "https://github.com/meagerfindings/mgreten-swamp-extensions"
+license: MIT
+paths:
+  base: manifest
+models:
+  - tdh3_readonly.ts
+  - tdh3_programming.ts
+  - tdh3_profiles.ts
+  - tdh3_listening.ts
+additionalFiles:
+  - README.md
+  - LICENSE
+  - PROVENANCE.md
+  - requirements-macos.txt
+binaries:
+  - runtime/bridge.py
+  - runtime/probe.py
+  - runtime/decode_capture.py
+  - runtime/programming.py
+  - runtime/profiles.py
+  - runtime/allocation.py
+  - runtime/listening.py
+  - runtime/cancellation.py
+platforms:
+  - darwin-aarch64
+labels:
+  - gmrs
+  - bluetooth
+  - experimental
